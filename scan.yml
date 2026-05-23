@@ -1,0 +1,63 @@
+name: ScanX EMA 9/21 Scanner
+
+on:
+  schedule:
+    # 9:00 AM IST  = 3:30 AM UTC
+    - cron: "30 3 * * 1-5"
+    # 4:00 PM IST  = 10:30 AM UTC
+    - cron: "30 10 * * 1-5"
+
+  # Allow manual trigger from GitHub UI (for testing)
+  workflow_dispatch:
+    inputs:
+      session:
+        description: "Session to run"
+        required: true
+        default: "morning"
+        type: choice
+        options:
+          - morning
+          - evening
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install yfinance pandas requests beautifulsoup4
+
+      - name: Determine session from cron time
+        id: session
+        run: |
+          # Manual trigger overrides cron
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "session=${{ github.event.inputs.session }}" >> $GITHUB_OUTPUT
+          else
+            HOUR=$(date -u +%H)
+            if [ "$HOUR" = "03" ]; then
+              echo "session=morning" >> $GITHUB_OUTPUT
+            else
+              echo "session=evening" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Run scanner
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SCAN_SESSION: ${{ steps.session.outputs.session }}
+        run: |
+          python scanner.py
