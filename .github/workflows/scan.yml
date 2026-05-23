@@ -2,11 +2,8 @@ name: ScanX EMA 9/21 Scanner
 
 on:
   schedule:
-    # 9:00 AM IST  = 3:30 AM UTC
     - cron: "30 3 * * 1-5"
-    # 4:00 PM IST  = 10:30 AM UTC
     - cron: "30 10 * * 1-5"
-
   workflow_dispatch:
     inputs:
       session:
@@ -22,12 +19,12 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-       with:
-          token: ${{ secrets.GITHUB_TOKEN }}    
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -38,7 +35,7 @@ jobs:
           pip install --upgrade pip
           pip install yfinance pandas requests beautifulsoup4
 
-      - name: Determine session from cron time
+      - name: Determine session
         id: session
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
